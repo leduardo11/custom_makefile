@@ -1,10 +1,10 @@
 # -----------------------------------------------------------------------------
 # Usage Guide (Makefile is self-contained)
 # -----------------------------------------------------------------------------
-# make                  - Build the project (default target)
-# make run              - Build and run the project
-# make release          - Optimized release build
-# make debug            - Clean and rebuild (debug mode)
+# make                  - Build the project (default target, verbose debug build)
+# make run              - Build quietly with debug flags and run
+# make release          - Optimized release build (verbose)
+# make debug            - Clean, verbose debug build, then run
 # make clean            - Remove all build artifacts
 # make info             - Print build configuration details
 #
@@ -41,7 +41,7 @@ UNAME_S := $(shell uname)
 STD := -std=c++20
 COMMON_WARNINGS := -Wall -Wextra -Wpedantic
 DEBUG_FLAGS := -g $(COMMON_WARNINGS)
-RELEASE_FLAGS := -O3 -DNDEBUG
+RELEASE_FLAGS := -O3 -DNDEBUG $(COMMON_WARNINGS)
 
 # Platform-specific includes and libs
 ifeq ($(UNAME_S),Darwin)
@@ -130,6 +130,10 @@ debug: clean
 	@echo "CFLAGS:   $(CFLAGS)"
 	@echo "LDFLAGS:  $(LDFLAGS)"
 	@$(MAKE) all
+	@$(MAKE) run
+
+run: $(OUT)
+	@./$(OUT)
 
 info:
 	@echo "UNAME_S:        $(UNAME_S)"
@@ -158,8 +162,6 @@ copy_assets:
 		cp -r $(ASSETS_DIR) $(BIN_DIR)/; \
 	fi
 
-run: all
-	./$(OUT)
-
 clean:
 	rm -rf $(BIN_DIR) $(OBJ_DIR)
+
