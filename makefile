@@ -39,7 +39,7 @@ UNAME_S := $(shell uname)
 
 # Standards and warnings
 STD := -std=c++20
-COMMON_WARNINGS := -Wall -Wextra -Wpedantic
+COMMON_WARNINGS := -Wall -Werror -Wextra -Wpedantic
 DEBUG_FLAGS := -g $(COMMON_WARNINGS)
 RELEASE_FLAGS := -O3 -DNDEBUG $(COMMON_WARNINGS)
 
