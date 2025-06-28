@@ -4,7 +4,6 @@
 # make                  - Build (default: debug build)
 # make run              - Run the compiled binary
 # make release          - Optimized release build (no ASan)
-# make debug            - Clean, rebuild with debug flags, then run
 # make clean            - Remove all build artifacts
 # make info             - Show configuration
 #
@@ -23,29 +22,24 @@ INCLUDE_DIR := include
 ASSETS_DIR := resources
 
 USELIB_RAYLIB ?= 0
-USELIB_SQLITE ?= 1
+USELIB_SQLITE ?= 0
 
 UNAME_S := $(shell uname)
 
-# Toolchain selection and ASan enable flag
 ifeq ($(UNAME_S),Darwin)
     CXX := clang++
     CC := clang
-    USE_ASAN := 0    # Disable ASan on macOS to avoid linker issues
+    USE_ASAN := 0
 else
     CXX := g++
     CC := gcc
-    USE_ASAN := 1    # Enable ASan on Linux by default
+    USE_ASAN := 1
 endif
 
-# Standards and warnings
 STD := -std=c++20
 COMMON_WARNINGS := -Wall -Wextra -Wpedantic
-
-# ASan flags
 ASAN_FLAGS := -fsanitize=address -fno-omit-frame-pointer
 
-# Debug and Release Flags
 ifeq ($(USE_ASAN),1)
     DEBUG_FLAGS := -g $(COMMON_WARNINGS) $(ASAN_FLAGS)
 else
@@ -54,7 +48,6 @@ endif
 
 RELEASE_FLAGS := -O3 -DNDEBUG $(COMMON_WARNINGS)
 
-# Platform-specific includes/libs
 ifeq ($(UNAME_S),Darwin)
     PLATFORM_INCLUDES := -I/opt/homebrew/include
     PLATFORM_LIBS := -L/opt/homebrew/lib
@@ -70,13 +63,14 @@ endif
 
 BASE_INCLUDES := -I$(INCLUDE_DIR) $(PLATFORM_INCLUDES)
 
-# Compiler flags
+# Default to debug flags
 CXXFLAGS := $(DEBUG_FLAGS) $(STD) $(BASE_INCLUDES)
 CFLAGS := $(DEBUG_FLAGS) -std=c11 $(BASE_INCLUDES)
+
+# Release flags for `make release`
 CXXFLAGS_RELEASE := $(RELEASE_FLAGS) $(STD) $(BASE_INCLUDES)
 CFLAGS_RELEASE := $(RELEASE_FLAGS) -std=c11 $(BASE_INCLUDES)
 
-# Libraries to link
 LDFLAGS_LIBS :=
 ifeq ($(USELIB_RAYLIB),1)
     CXXFLAGS += -DUSE_RAYLIB -I$(RAYLIB_INCLUDE)
@@ -92,7 +86,6 @@ endif
 
 LDFLAGS := $(PLATFORM_LIBS) $(LDFLAGS_LIBS) $(LDFLAGS_PLATFORM) -lpthread -lm -ldl
 
-# Source files
 CPP_SRC := $(wildcard $(SRC_DIR)/*.cpp)
 C_SRC := $(wildcard $(SRC_DIR)/*.c)
 SRC := $(CPP_SRC) $(C_SRC)
@@ -116,22 +109,17 @@ else
 LINKER := $(CXX)
 endif
 
-.PHONY: all clean run release debug info copy_assets
+.PHONY: all clean run release info copy_assets
 
 all: $(BIN_DIR) copy_assets $(OUT)
-	@echo "=== Build complete ==="
+	@echo "=== Build complete (debug config) ==="
 	@echo "Binary: $(OUT)"
 
 release: clean
 	@echo "=== Building release version ==="
 	@$(MAKE) CXXFLAGS="$(CXXFLAGS_RELEASE)" CFLAGS="$(CFLAGS_RELEASE)" all
 
-debug: clean
-	@echo "=== Building debug version ==="
-	@$(MAKE) all
-	@$(MAKE) run
-
-run: $(OUT)
+run: all
 	@echo "=== Running $(OUT) ==="
 	@./$(OUT)
 
