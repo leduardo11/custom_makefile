@@ -25,6 +25,7 @@ USELIB_RAYLIB ?= 0
 USELIB_SQLITE ?= 0
 
 UNAME_S := $(shell uname)
+BUILD_MODE ?= debug
 
 ifeq ($(UNAME_S),Darwin)
     CXX := clang++
@@ -101,12 +102,12 @@ endif
 .PHONY: all clean run release info copy_assets
 
 all: $(BIN_DIR) copy_assets $(OUT)
-	@echo "=== Build complete (debug config) ==="
+	@echo "=== Build complete ($(BUILD_MODE)) ==="
 	@echo "Binary: $(OUT)"
 
 release: clean
 	@echo "=== Building release version ==="
-	@$(MAKE) CXXFLAGS="$(CXXFLAGS_RELEASE)" CFLAGS="$(CFLAGS_RELEASE)" all
+	@$(MAKE) CXXFLAGS="$(CXXFLAGS_RELEASE)" CFLAGS="$(CFLAGS_RELEASE)" BUILD_MODE=release all
 
 run: all
 	@echo "=== Running $(OUT) ==="
@@ -121,6 +122,7 @@ info:
 	@echo "LDFLAGS:        $(LDFLAGS)"
 	@echo "Raylib enabled: $(USELIB_RAYLIB)"
 	@echo "SQLite enabled: $(USELIB_SQLITE)"
+	@echo "Build mode:     $(BUILD_MODE)"
 
 $(OUT): $(OBJ) | $(BIN_DIR)
 	$(LINKER) $(OBJ) -o $@ $(LDFLAGS)
