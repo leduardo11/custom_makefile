@@ -1,26 +1,21 @@
 # -----------------------------------------------------------------------------
-# Usage Guide (Makefile is self-contained)
+# Usage Guide
 # -----------------------------------------------------------------------------
-# make                  - Build the project (default: debug build)
-# make run              - Build (debug) and run with optional ASan
+# make                  - Build (default: debug build)
+# make run              - Run the compiled binary
 # make release          - Optimized release build (no ASan)
-# make debug            - Clean, debug build, then run
+# make debug            - Clean, rebuild with debug flags, then run
 # make clean            - Remove all build artifacts
-# make info             - Print build configuration details
+# make info             - Show configuration
 #
 # Optional Flags:
 #   USELIB_RAYLIB=1     - Enable raylib support
 #   USELIB_SQLITE=1     - Enable SQLite support
-#   USE_ASAN=1          - Enable AddressSanitizer (ASan)
-#
-# Examples:
-#   make USELIB_RAYLIB=1 USE_ASAN=1
-#   make release USELIB_SQLITE=1
 # -----------------------------------------------------------------------------
 
 .DEFAULT_GOAL := all
 
-PROJECT_NAME := c_app
+PROJECT_NAME := c_test
 SRC_DIR := src
 OBJ_DIR := obj
 BIN_DIR := bin
@@ -29,56 +24,63 @@ ASSETS_DIR := resources
 
 USELIB_RAYLIB ?= 0
 USELIB_SQLITE ?= 0
-USE_ASAN ?= 0
 
 UNAME_S := $(shell uname)
 
-# Toolchain
+# Toolchain selection and ASan enable flag
 ifeq ($(UNAME_S),Darwin)
     CXX := clang++
     CC := clang
+    USE_ASAN := 0    # Disable ASan on macOS to avoid linker issues
 else
     CXX := g++
     CC := gcc
+    USE_ASAN := 1    # Enable ASan on Linux by default
 endif
 
 # Standards and warnings
 STD := -std=c++20
 COMMON_WARNINGS := -Wall -Werror -Wextra -Wpedantic
 
+# ASan flags
 ASAN_FLAGS := -fsanitize=address -fno-omit-frame-pointer
-ASAN_LINK_FLAGS := -fsanitize=address
-ASAN_OPTIONS := detect_leaks=1:abort_on_error=1
 
-DEBUG_FLAGS := -g $(COMMON_WARNINGS)
-RELEASE_FLAGS := -O3 -DNDEBUG $(COMMON_WARNINGS)
-
+# Debug and Release Flags
 ifeq ($(USE_ASAN),1)
-    DEBUG_FLAGS += $(ASAN_FLAGS)
+    DEBUG_FLAGS := -g $(COMMON_WARNINGS) $(ASAN_FLAGS)
+else
+    DEBUG_FLAGS := -g $(COMMON_WARNINGS)
 endif
 
+RELEASE_FLAGS := -O3 -DNDEBUG $(COMMON_WARNINGS)
+
+# Platform-specific includes/libs
 ifeq ($(UNAME_S),Darwin)
     PLATFORM_INCLUDES := -I/opt/homebrew/include
     PLATFORM_LIBS := -L/opt/homebrew/lib
     LDFLAGS_PLATFORM := -framework OpenGL -framework Cocoa -framework IOKit \
                         -framework CoreAudio -framework CoreVideo
+    RAYLIB_INCLUDE := /opt/homebrew/include/raylib
 else
     PLATFORM_INCLUDES := -I/usr/local/include
     PLATFORM_LIBS := -L/usr/local/lib
     LDFLAGS_PLATFORM := -lGL -lrt -lX11
+    RAYLIB_INCLUDE := /usr/local/include/raylib
 endif
 
 BASE_INCLUDES := -I$(INCLUDE_DIR) $(PLATFORM_INCLUDES)
 
+# Compiler flags
 CXXFLAGS := $(DEBUG_FLAGS) $(STD) $(BASE_INCLUDES)
 CFLAGS := $(DEBUG_FLAGS) -std=c11 $(BASE_INCLUDES)
 CXXFLAGS_RELEASE := $(RELEASE_FLAGS) $(STD) $(BASE_INCLUDES)
 CFLAGS_RELEASE := $(RELEASE_FLAGS) -std=c11 $(BASE_INCLUDES)
 
+# Libraries to link
 LDFLAGS_LIBS :=
 ifeq ($(USELIB_RAYLIB),1)
-    CXXFLAGS += -DUSE_RAYLIB -I$(PLATFORM_INCLUDES)/raylib
-    CFLAGS += -DUSE_RAYLIB -I$(PLATFORM_INCLUDES)/raylib
+    CXXFLAGS += -DUSE_RAYLIB -I$(RAYLIB_INCLUDE)
+    CFLAGS += -DUSE_RAYLIB -I$(RAYLIB_INCLUDE)
     LDFLAGS_LIBS += -lraylib
 endif
 
@@ -89,10 +91,8 @@ ifeq ($(USELIB_SQLITE),1)
 endif
 
 LDFLAGS := $(PLATFORM_LIBS) $(LDFLAGS_LIBS) $(LDFLAGS_PLATFORM) -lpthread -lm -ldl
-ifeq ($(USE_ASAN),1)
-    LDFLAGS += $(ASAN_LINK_FLAGS)
-endif
 
+# Source files
 CPP_SRC := $(wildcard $(SRC_DIR)/*.cpp)
 C_SRC := $(wildcard $(SRC_DIR)/*.c)
 SRC := $(CPP_SRC) $(C_SRC)
@@ -116,31 +116,24 @@ else
 LINKER := $(CXX)
 endif
 
-.PHONY: all clean run release debug info
+.PHONY: all clean run release debug info copy_assets
 
-all: 
-	@echo "=== Building (default: debug) ==="
-	@echo "CXXFLAGS: $(CXXFLAGS)"
-	@echo "CFLAGS:   $(CFLAGS)"
-	@echo "LDFLAGS:  $(LDFLAGS)"
-	@$(MAKE) $(BIN_DIR) copy_assets $(OUT)
+all: $(BIN_DIR) copy_assets $(OUT)
+	@echo "=== Build complete ==="
+	@echo "Binary: $(OUT)"
 
 release: clean
 	@echo "=== Building release version ==="
-	@$(MAKE) CXXFLAGS="$(CXXFLAGS_RELEASE)" CFLAGS="$(CFLAGS_RELEASE)" USE_ASAN=0 all
+	@$(MAKE) CXXFLAGS="$(CXXFLAGS_RELEASE)" CFLAGS="$(CFLAGS_RELEASE)" all
 
 debug: clean
 	@echo "=== Building debug version ==="
-	@$(MAKE) USE_ASAN=$(USE_ASAN) all
+	@$(MAKE) all
 	@$(MAKE) run
 
 run: $(OUT)
-	@echo "=== Running with ASan options if enabled ==="
-ifeq ($(USE_ASAN),1)
-	ASAN_OPTIONS=$(ASAN_OPTIONS) ./$(OUT)
-else
-	./$(OUT)
-endif
+	@echo "=== Running $(OUT) ==="
+	@./$(OUT)
 
 info:
 	@echo "UNAME_S:        $(UNAME_S)"
@@ -151,7 +144,6 @@ info:
 	@echo "LDFLAGS:        $(LDFLAGS)"
 	@echo "Raylib enabled: $(USELIB_RAYLIB)"
 	@echo "SQLite enabled: $(USELIB_SQLITE)"
-	@echo "ASan enabled:   $(USE_ASAN)"
 
 $(OUT): $(OBJ)
 	$(LINKER) $(OBJ) -o $@ $(LDFLAGS)
