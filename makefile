@@ -15,7 +15,7 @@
 
 .DEFAULT_GOAL := all
 
-PROJECT_NAME := c_test
+PROJECT_NAME := c_pos
 SRC_DIR := src
 OBJ_DIR := obj
 BIN_DIR := bin
@@ -23,7 +23,7 @@ INCLUDE_DIR := include
 ASSETS_DIR := resources
 
 USELIB_RAYLIB ?= 0
-USELIB_SQLITE ?= 0
+USELIB_SQLITE ?= 1
 
 UNAME_S := $(shell uname)
 
@@ -40,7 +40,7 @@ endif
 
 # Standards and warnings
 STD := -std=c++20
-COMMON_WARNINGS := -Wall -Werror -Wextra -Wpedantic
+COMMON_WARNINGS := -Wall -Wextra -Wpedantic
 
 # ASan flags
 ASAN_FLAGS := -fsanitize=address -fno-omit-frame-pointer
@@ -145,7 +145,7 @@ info:
 	@echo "Raylib enabled: $(USELIB_RAYLIB)"
 	@echo "SQLite enabled: $(USELIB_SQLITE)"
 
-$(OUT): $(OBJ)
+$(OUT): $(OBJ) | $(BIN_DIR)
 	$(LINKER) $(OBJ) -o $@ $(LDFLAGS)
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(HEADERS) | $(OBJ_DIR)
