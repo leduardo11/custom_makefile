@@ -3,7 +3,7 @@
 # -----------------------------------------------------------------------------
 # make                  - Build (default: debug build)
 # make run              - Run the compiled binary
-# make release          - Optimized release build (no ASan)
+# make release          - Optimized release build
 # make clean            - Remove all build artifacts
 # make info             - Show configuration
 #
@@ -14,7 +14,7 @@
 
 .DEFAULT_GOAL := all
 
-PROJECT_NAME := c_pos
+PROJECT_NAME := c_course
 SRC_DIR := src
 OBJ_DIR := obj
 BIN_DIR := bin
@@ -29,23 +29,14 @@ UNAME_S := $(shell uname)
 ifeq ($(UNAME_S),Darwin)
     CXX := clang++
     CC := clang
-    USE_ASAN := 0
 else
     CXX := g++
     CC := gcc
-    USE_ASAN := 1
 endif
 
 STD := -std=c++20
 COMMON_WARNINGS := -Wall -Wextra -Wpedantic
-ASAN_FLAGS := -fsanitize=address -fno-omit-frame-pointer
-
-ifeq ($(USE_ASAN),1)
-    DEBUG_FLAGS := -g $(COMMON_WARNINGS) $(ASAN_FLAGS)
-else
-    DEBUG_FLAGS := -g $(COMMON_WARNINGS)
-endif
-
+DEBUG_FLAGS := -g $(COMMON_WARNINGS)
 RELEASE_FLAGS := -O3 -DNDEBUG $(COMMON_WARNINGS)
 
 ifeq ($(UNAME_S),Darwin)
@@ -63,11 +54,9 @@ endif
 
 BASE_INCLUDES := -I$(INCLUDE_DIR) $(PLATFORM_INCLUDES)
 
-# Default to debug flags
 CXXFLAGS := $(DEBUG_FLAGS) $(STD) $(BASE_INCLUDES)
 CFLAGS := $(DEBUG_FLAGS) -std=c11 $(BASE_INCLUDES)
 
-# Release flags for `make release`
 CXXFLAGS_RELEASE := $(RELEASE_FLAGS) $(STD) $(BASE_INCLUDES)
 CFLAGS_RELEASE := $(RELEASE_FLAGS) -std=c11 $(BASE_INCLUDES)
 
